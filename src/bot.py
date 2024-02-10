@@ -5,8 +5,6 @@ import schedule
 import threading
 import logging
 import time
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -111,38 +109,6 @@ def send_notification(chat_id):
         bot.send_message(chat_id, "Хей! 👋\nЯ тут, щоб нагатдати тобі вказати твої витрати)")
     except Exception as e:
         logger.error(f"Error sending notification to chat_id {chat_id}: {e}")
-
-def polling_thread():
-    bot.polling(none_stop=True)
-
-@bot.message_handler(content_types=['text'])
-def handle_update_button(message):
-    if message.text == "Update" and message.from_user.id in whitelist:
-        latest_update = get_latest_update_from_google_sheets()
-        if latest_update:
-            version, description = latest_update
-            update_message = f"Нове оновлення: Версія *{version}*\n{description}"
-            bot.send_message(message.chat.id, update_message, parse_mode='Markdown')
-        else:
-            bot.send_message(message.chat.id, "Немає доступних оновлень")
-    elif message.text == "Update" and message.from_user.id not in whitelist:
-        bot.send_message(message.chat.id, permission_denied_message)
-
-def get_latest_update_from_google_sheets():
-    try:
-        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-        creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_SHEETS_CREDS_FILE, scope)
-        client = gspread.authorize(creds)
-        sheet = client.open_by_key(SPREADSHEET_ID).sheet1
-        data = sheet.get_all_values()
-        if len(data) > 1:
-            latest_update = data[-1]
-            return latest_update
-        else:
-            return None
-    except Exception as e:
-        print("Error getting latest update:", e)
-        return None
 
 def polling_thread():
     bot.polling(none_stop=True)
