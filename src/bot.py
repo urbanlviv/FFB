@@ -125,16 +125,17 @@ def send_notification(chat_id):
 def polling_thread():
     bot.polling(none_stop=True)
 
-@bot.message_handler(content_types=['text'])
+@bot.message_handler(commands=['update'])
 def handle_update_button(message):
-    if message.text == "Update" and message.from_user.id in whitelist:
+    logger.info("Checking for updates")
+    if message.from_user.id in whitelist:
         version, description = get_latest_release_info()
         if version and description:
-            update_message = f"*Нове оновлення*\nВерсія: *{version}*\n {description}"
+            update_message = f"*Нове оновлення*\nВерсія: *{version}*\n{description}"
             bot.send_message(message.chat.id, update_message, parse_mode='Markdown')
         else:
             bot.send_message(message.chat.id, "Немає доступних оновлень")
-    elif message.text == "Update" and message.from_user.id not in whitelist:
+    else:
         bot.send_message(message.chat.id, permission_denied_message)
 
 def polling_thread():
