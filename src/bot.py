@@ -1,14 +1,26 @@
 import telebot
-from config import TOKEN, whitelist, permission_denied_message, GOOGLE_SHEETS_CREDS_FILE, SPREADSHEET_ID
+from config import TOKEN, whitelist, permission_denied_message
 from telebot import types
 import schedule
 import threading
 import logging
 import time
+import requests
 
 bot = telebot.TeleBot(TOKEN)
 
 users_notifications = {}
+
+def get_latest_release_info():
+    url = 'https://api.github.com/repos/urbanlviv/FFB/releases/latest'
+    response = requests.get(url)
+    if response.status_code == 200:
+        release_info = response.json()
+        version = release_info['tag_name']
+        description = release_info['body']
+        return version, description
+    else:
+        return None, None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -109,6 +121,21 @@ def send_notification(chat_id):
         bot.send_message(chat_id, "Хей! 👋\nЯ тут, щоб нагатдати тобі вказати твої витрати)")
     except Exception as e:
         logger.error(f"Error sending notification to chat_id {chat_id}: {e}")
+
+def polling_thread():
+    bot.polling(none_stop=True)
+
+@bot.message_handler(content_types=['text'])
+def handle_update_button(message):
+    if message.text == "Update" and message.from_user.id in whitelist:
+        version, description = get_latest_release_info()
+        if version and description:
+            update_message = f"*Нове оновлення*\nВерсія: *{version}*\n {description}"
+            bot.send_message(message.chat.id, update_message, parse_mode='Markdown')
+        else:
+            bot.send_message(message.chat.id, "Немає доступних оновлень")
+    elif message.text == "Update" and message.from_user.id not in whitelist:
+        bot.send_message(message.chat.id, permission_denied_message)
 
 def polling_thread():
     bot.polling(none_stop=True)
